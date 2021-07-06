@@ -1,0 +1,4 @@
+cp /net/rwsnas436.us.oracle.com/export/pd_shiphomes/shiphomes/rdbms/linux.x64/MAIN/200723/goldimage/grid_home.zip .
+cp /net/rwsnas436.us.oracle.com/export/pd_shiphomes/shiphomes/rdbms/linux.x64/MAIN/200723/goldimage/db_home.zip .
+
+URL : https://confluence.oraclecorp.com/confluence/pages/viewpage.action?pageId=1755087062
