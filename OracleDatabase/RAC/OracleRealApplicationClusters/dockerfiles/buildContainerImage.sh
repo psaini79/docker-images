@@ -6,7 +6,7 @@
 #
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 #
-# Copyright (c) 2014,2021 Oracle and/or its affiliates.
+# Copyright (c) 2014-2024 Oracle and/or its affiliates. All rights reserved.
 #
 
 usage() {
@@ -24,7 +24,7 @@ Parameters:
 
 LICENSE UPL 1.0
 
-Copyright (c) 2014,2021 Oracle and/or its affiliates.
+Copyright (c) 2014-2024 Oracle and/or its affiliates. All rights reserved.
 
 EOF
   exit 0
@@ -36,11 +36,12 @@ checksumPackages() {
     echo "Checking if required packages are present and valid..."
     md5sum -c Checksum
     # shellcheck disable=SC2181
-    if [ "$?" -ne 0 ]; then
+    status=$?
+    if [ "$status" -ne 0 ]; then
       echo "MD5 for required packages to build this image did not match!"
       echo "Make sure to download missing files in folder $VERSION."
       # shellcheck disable=SC2320
-      exit $?
+      exit "$status"
     fi
   else
     echo "Ignored MD5 sum, 'md5sum' command not available.";
@@ -91,12 +92,18 @@ while getopts "hiv:o:pn:" optname; do
       ;;
   esac
 done
-
+# Automatically set SKIPMD5=1 if SLIMMING=true is passed in DOCKEROPS
+if [[ "$DOCKEROPS" == *"--build-arg SLIMMING=true"* ]]; then
+  SKIPMD5=1
+  echo "SLIMMING=true detected, SKIPMD5 is automatically set to 1."
+fi
 # Oracle Database Image Name
 if [ "${IMAGE_NAME}"x = "x" ] && [ "${SLIM}" == "true" ]; then
    IMAGE_NAME="oracle/database-rac:${VERSION}-slim"
+   STAGE_NAME="final-slim"
 elif [ "${IMAGE_NAME}"x = "x" ] && [ "${SLIM}" == "false" ]; then
    IMAGE_NAME="oracle/database-rac:${VERSION}"
+   STAGE_NAME="final"
 else
    echo "Image name is passed as an variable"
 fi
@@ -147,12 +154,13 @@ echo "Building image '$IMAGE_NAME' ..."
 # BUILD THE IMAGE (replace all environment variables)
 BUILD_START=$(date '+%s')
 # shellcheck disable=SC2086
-docker build --force-rm=true --no-cache=true ${DOCKEROPS} ${PROXY_SETTINGS} -t ${IMAGE_NAME} -f Dockerfile . || {
+docker build --force-rm=true --no-cache=true ${DOCKEROPS} ${PROXY_SETTINGS} -t ${IMAGE_NAME} -f Dockerfile . --target ${STAGE_NAME} || {
   echo "There was an error building the image."
   exit 1
 }
 BUILD_END=$(date '+%s')
-BUILD_ELAPSED=$( "$BUILD_END" - "$BUILD_START" )
+# shellcheck disable=SC2154,SC2003
+BUILD_ELAPSED=$((BUILD_END - BUILD_START))
 
 echo ""
 # shellcheck disable=SC2181,SC2320

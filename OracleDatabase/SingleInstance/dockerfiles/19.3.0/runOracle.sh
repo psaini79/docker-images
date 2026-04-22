@@ -22,7 +22,9 @@ function moveFiles {
    mv "$ORACLE_HOME"/network/admin/sqlnet.ora "$ORACLE_BASE"/oradata/dbconfig/"$ORACLE_SID"/
    mv "$ORACLE_HOME"/network/admin/listener.ora "$ORACLE_BASE"/oradata/dbconfig/"$ORACLE_SID"/
    mv "$ORACLE_HOME"/network/admin/tnsnames.ora "$ORACLE_BASE"/oradata/dbconfig/"$ORACLE_SID"/
-   mv "$ORACLE_HOME"/install/.docker_* "$ORACLE_BASE"/oradata/dbconfig/"$ORACLE_SID"/
+   if [ -n "$(shopt -s nullglob; echo "$ORACLE_HOME"/install/.docker_*)" ]; then
+      mv "$ORACLE_HOME"/install/.docker_* "$ORACLE_BASE"/oradata/dbconfig/"$ORACLE_SID"/
+   fi;
 
    # oracle user does not have permissions in /etc, hence cp and not mv
    cp /etc/oratab "$ORACLE_BASE"/oradata/dbconfig/"$ORACLE_SID"/
@@ -111,6 +113,14 @@ EOF
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 ###################################
 
+# Only EE is supported for 19c on ARM64 platform
+if [ "$(arch)" == "aarch64" ] || [ "$(arch)" == "arm64" ]; then
+  if { [ "${ORACLE_EDITION^^}" != "" ] && [ "${ORACLE_EDITION^^}" != "ENTERPRISE" ]; }; then
+    echo "${ORACLE_EDITION} edition is not supported on ARM64 platform.";
+    exit 1;
+  fi;
+fi;
+
 # Check whether container has enough memory
 if [[ -f /sys/fs/cgroup/cgroup.controllers ]]; then
    memory=$(cat /sys/fs/cgroup/memory.max)
@@ -145,7 +155,8 @@ trap _term SIGTERM
 
 # Setting up ORACLE_PWD if podman secret is passed on
  if [ -e '/run/secrets/oracle_pwd' ]; then
-    export ORACLE_PWD="$(cat '/run/secrets/oracle_pwd')"
+    ORACLE_PWD="$(cat '/run/secrets/oracle_pwd')"
+    export ORACLE_PWD
  fi
 
 # Creation of Observer only section
@@ -217,15 +228,16 @@ export ORACLE_PDB=${ORACLE_PDB^^}
 export ORACLE_CHARACTERSET=${ORACLE_CHARACTERSET:-AL32UTF8}
 
 # Call relinkOracleBinary.sh before the database is created or started
+# shellcheck disable=SC1090
 . "$ORACLE_BASE/$RELINK_BINARY_FILE"
 
 # Check whether database already exists
-if [ -f "$ORACLE_BASE"/oradata/.${ORACLE_SID}"${CHECKPOINT_FILE_EXTN}" ] && [ -d "$ORACLE_BASE"/oradata/"${ORACLE_SID}" ]; then
+if [ -f "$ORACLE_BASE"/oradata/."${ORACLE_SID}""${CHECKPOINT_FILE_EXTN}" ] && [ -d "$ORACLE_BASE"/oradata/"${ORACLE_SID}" ]; then
    symLinkFiles;
    
    # Make sure audit file destination exists
-   if [ ! -d "$ORACLE_BASE"/admin/$ORACLE_SID/adump ]; then
-      mkdir -p "$ORACLE_BASE"/admin/$ORACLE_SID/adump
+   if [ ! -d "$ORACLE_BASE"/admin/"$ORACLE_SID"/adump ]; then
+      mkdir -p "$ORACLE_BASE"/admin/"$ORACLE_SID"/adump
    fi;
    
    # Start database
@@ -240,32 +252,32 @@ else
   undoSymLinkFiles;
 
   # Remove database config files, if they exist
-  rm -f "$ORACLE_HOME"/dbs/spfile$ORACLE_SID.ora
-  rm -f "$ORACLE_HOME"/dbs/orapw$ORACLE_SID
+  rm -f "$ORACLE_HOME"/dbs/spfile"$ORACLE_SID".ora
+  rm -f "$ORACLE_HOME"/dbs/orapw"$ORACLE_SID"
   rm -f "$ORACLE_HOME"/network/admin/sqlnet.ora
   rm -f "$ORACLE_HOME"/network/admin/listener.ora
   rm -f "$ORACLE_HOME"/network/admin/tnsnames.ora
 
   # Clean up incomplete database
-  rm -rf "$ORACLE_BASE"/oradata/$ORACLE_SID
+  rm -rf "$ORACLE_BASE"/oradata/"$ORACLE_SID"
   cp /etc/oratab oratab.bkp
   sed "/^#/!d" oratab.bkp > /etc/oratab
   rm -f oratab.bkp
-  rm -rf "$ORACLE_BASE"/cfgtoollogs/dbca/$ORACLE_SID
-  rm -rf "$ORACLE_BASE"/admin/$ORACLE_SID
+  rm -rf "$ORACLE_BASE"/cfgtoollogs/dbca/"$ORACLE_SID"
+  rm -rf "$ORACLE_BASE"/admin/"$ORACLE_SID"
 
   # clean up zombie shared memory/semaphores
   ipcs -m | awk ' /[0-9]/ {print $2}' | xargs -n1 ipcrm -m 2> /dev/null
   ipcs -s | awk ' /[0-9]/ {print $2}' | xargs -n1 ipcrm -s 2> /dev/null
 
   # Create database
-  "$ORACLE_BASE"/"$CREATE_DB_FILE" $ORACLE_SID "$ORACLE_PDB" "$ORACLE_PWD" || exit 1;
+  "$ORACLE_BASE"/"$CREATE_DB_FILE" "$ORACLE_SID" "$ORACLE_PDB" "$ORACLE_PWD" || exit 1;
 
   # Check whether database is successfully created
-  if "$ORACLE_BASE"/"$CHECK_DB_FILE"; then
+  if IGNORE_DB_STARTED_MARKER=true "$ORACLE_BASE"/"$CHECK_DB_FILE"; then
     # Create a checkpoint file if database is successfully created
     # Populate the checkpoint file with the current date to avoid timing issue when using NFS persistence in multi-replica mode
-    echo "$(date -Iseconds)" > "$ORACLE_BASE"/oradata/.${ORACLE_SID}"${CHECKPOINT_FILE_EXTN}"
+    date -Iseconds > "$ORACLE_BASE"/oradata/."${ORACLE_SID}""${CHECKPOINT_FILE_EXTN}"
   fi
 
   # Move database operational files to oradata
@@ -285,7 +297,7 @@ else
 fi;
 
 # Check whether database is up and running
-"$ORACLE_BASE"/"$CHECK_DB_FILE"
+IGNORE_DB_STARTED_MARKER=true "$ORACLE_BASE"/"$CHECK_DB_FILE"
 status=$?
 
 if [ $status -eq 0 ]; then
@@ -298,6 +310,8 @@ if [ $status -eq 0 ]; then
   # Execute custom provided startup scripts
   "$ORACLE_BASE"/"$USER_SCRIPTS_FILE" "$ORACLE_BASE"/scripts/startup
   
+  # Create marker file for the health check
+  touch "$DB_STARTED_MARKER_FILE"
 else
   echo "#####################################"
   echo "########### E R R O R ###############"

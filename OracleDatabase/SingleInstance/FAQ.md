@@ -4,28 +4,24 @@
 
 Yes, this feature is supported version 19.3 onwards.
 
-Versions prior to 19.3 available on the [Oracle Container Registry](https://container-registry.oracle.com/), like the Oracle Database 12c Standard Edition 2 and Enterprise Edition images, are not based on any of the Dockerfiles contained in this repository. For such versions, if you require the runtime functionality documented in this repository, you will need to build an image from the appropriate Dockerfile.
+Versions prior to 19.3 available on the [Oracle Container Registry](https://container-registry.oracle.com/), like the Oracle Database 12c Standard Edition 2 and Enterprise Edition images, are not based on any of the Dockerfiles contained in this repository.
+For such versions, if you require the runtime functionality documented in this repository, you will need to build an image from the appropriate Dockerfile.
 
 ## How do I change the timezone of my container
 
-As of Docker 17.06-ce, Docker does not yet provide a way to pass down the `TZ` Unix environment variable from the host to the container. Because of that all containers run in the UTC timezone. If you would like to have your database run in a different timezone you can pass on the `TZ` environment variable within the `docker run` command via the `-e` option. An example would be: `docker run ... -e TZ="Europe/Vienna" oracle/database:12.2.0.1-ee`. Another option would be to specify two read-only volume mounts: `docker run ... -v /etc/timezone:/etc/timezone:ro -v /etc/localtime:/etc/localtime:ro oracle/database:12.2.0.1-ee`. This will synchronize the timezone of the the container with that of the Docker host.
+As of Docker 17.06-ce, Docker does not yet provide a way to pass down the `TZ` Unix environment variable from the host to the container. Because of that all containers run in the UTC timezone. If you would like to have your database run in a different timezone you can pass on the `TZ` environment variable within the `docker run` command via the `-e` option.
+An example would be: `docker run ... -e TZ="Europe/Vienna" oracle/database:12.2.0.1-ee`. Another option would be to specify two read-only volume mounts: `docker run ... -v /etc/timezone:/etc/timezone:ro -v /etc/localtime:/etc/localtime:ro oracle/database:12.2.0.1-ee`. This will synchronize the timezone of the container with that of the Docker host.
 
 ## Can I run Oracle Database containers on Apple M1 (Arm) devices?
 
-Oracle Database does not support the Arm architecture and will not run on Apple M1 silicon. You will see errors during the build process:
-
-```plain
-error: `sed: can't read /etc/security/limits.d/oracle-database-preinstall-18c.conf: No such file or directory`
-```
-
-This is caused by the Oracle Linux base image which does work on Arm not being able to install the Oracle Database preinstall requirements
-which are not available for that architecture.
+Oracle Database 19c Enterprise Edition and 26ai Free Edition are now supported on ARM64 platforms. You will have to provide the installation binaries of [Oracle Database 19c](https://www.oracle.com/database/technologies/oracle19c-linux-arm64-downloads.html) and put them into the dockerfiles/19.3.0 folder before running the buildContainerImage.sh script.
 
 ## checkSpace.sh: ERROR - There is not enough space available in the container
 
 This error is thrown when there is no sufficient space available within the container to unzip the install binaries and run the installation of the Oracle database. The container runs the `df` Unix command, meaning that even if you think there should be enough space, there certainly isn't within the container.
 
-Please make sure that you have enough space available. If you use a storage diver such as `overlay2`, make sure that the output of `docker info` shows a `Base Device Size:` that is bigger than the required space. If not, please change the Base Device Size via the `--storage-opt dm.basesize=` option for the Docker daemon, see [this thread on Docker forums](https://forums.docker.com/t/increase-container-volume-disk-size/1652/4) for more information on that. **Note: You will have to delete all images afterwards to make sure that the new setting is picked up!**
+Please make sure that you have enough space available. If you use a storage diver such as `overlay2`, make sure that the output of `docker info` shows a `Base Device Size:` that is bigger than the required space.
+If not, please change the Base Device Size via the `--storage-opt dm.basesize=` option for the Docker daemon, see [this thread on Docker forums](https://forums.docker.com/t/increase-container-volume-disk-size/1652/4) for more information on that. **Note: You will have to delete all images afterwards to make sure that the new setting is picked up!**
 
 ## Error: The container doesn't have enough memory allocated. A database XE container needs at least 1 GB of shared memory (/dev/shm)
 
@@ -37,7 +33,8 @@ CRC errors by the Unix unzip command during image build can be caused by a lack 
 
 ## "Cannot create directory" error when using volumes
 
-This is a Unix file system permission issue. Docker by default will map the `uid` inside the container to the outside world. The `uid` for the `oracle` user inside the container is `54321` and therefore all files are created with this `uid`. If you happen to have your volume pointed at a location outside there container where this `uid` doesn't have any permissions for, the container can't write to it and therefore the database files creation fails. There are several remedies for this situation:
+This is a Unix file system permission issue. Docker by default will map the `uid` inside the container to the outside world. The `uid` for the `oracle` user inside the container is `54321` and therefore all files are created with this `uid`.
+If you happen to have your volume pointed at a location outside there container where this `uid` doesn't have any permissions for, the container can't write to it and therefore the database files creation fails. There are several remedies for this situation:
 
 * Use named volumes
 * Change the ownership of your folder to `54321`

@@ -73,10 +73,8 @@ You should then be able to create a new Ruby on Rails application.
 
 ### NGINX module
 
-* [`oraclelinux8-nginx:1.14`](oraclelinux8/nginx/1.14/Dockerfile)
-* [`oraclelinux8-nginx:1.16`](oraclelinux8/nginx/1.16/Dockerfile)
-* [`oraclelinux8-nginx:1.18`](oraclelinux8/nginx/1.18/Dockerfile)
 * [`oraclelinux8-nginx:1.20`](oraclelinux8/nginx/1.20/Dockerfile)
+* [`oraclelinux8-nginx:1.22`](oraclelinux8/nginx/1.22/Dockerfile)
 
 ### Node.js module
 
@@ -85,22 +83,22 @@ You should then be able to create a new Ruby on Rails application.
 * [`oraclelinux8-nodejs:14-oracledb`](oraclelinux8/nodejs/14-oracledb/Dockerfile)
 * [`oraclelinux8-nodejs:16`](oraclelinux8/nodejs/16/Dockerfile)
 * [`oraclelinux8-nodejs:18`](oraclelinux8/nodejs/18/Dockerfile)
+* [`oraclelinux8-nodejs:20`](oraclelinux8/nodejs/20/Dockerfile)
 
-**Tip:** support for `yarn` is included with `oraclelinux8-nodejs:18` but is
-opt-in. To activate `yarn`, run `corepack enable` when building your downstream
-image.
+**Tip:** support for `yarn` is included with `oraclelinux8-nodejs:18` and `oraclelinux8-nodejs:20` but is
+opt-in. To activate `yarn`, run `corepack enable` when building your downstream image.
 
 ### PHP module
 
-* [`oraclelinux8-php:7.3-apache`](oraclelinux8/php/7.3-apache/Dockerfile)
-* [`oraclelinux8-php:7.3-cli`](oraclelinux8/php/7.3-cli/Dockerfile)
-* [`oraclelinux8-php:7.3-fpm`](oraclelinux8/php/7.3-fpm/Dockerfile)
 * [`oraclelinux8-php:7.4-apache`](oraclelinux8/php/7.4-apache/Dockerfile)
 * [`oraclelinux8-php:7.4-apache-oracledb`](oraclelinux8/php/7.4-apache-oracledb/Dockerfile)
 * [`oraclelinux8-php:7.4-cli`](oraclelinux8/php/7.4-cli/Dockerfile)
 * [`oraclelinux8-php:7.4-cli-oracledb`](oraclelinux8/php/7.4-cli-oracledb/Dockerfile)
 * [`oraclelinux8-php:7.4-fpm`](oraclelinux8/php/7.4-fpm/Dockerfile)
 * [`oraclelinux8-php:7.4-fpm-oracledb`](oraclelinux8/php/7.4-fpm-oracledb/Dockerfile)
+* [`oraclelinux8-php:8.0-apache`](oraclelinux8/php/8.0-apache/Dockerfile)
+* [`oraclelinux8-php:8.0-cli`](oraclelinux8/php/8.0-cli/Dockerfile)
+* [`oraclelinux8-php:8.0-fpm`](oraclelinux8/php/8.0-fpm/Dockerfile)
 
 ### Python modules
 
@@ -112,6 +110,11 @@ image.
 * [`oraclelinux8-python:3.6-oracledb`](oraclelinux8/python/3.6-oracledb/Dockerfile)
 * [`oraclelinux8-python:3.8`](oraclelinux8/python/3.8/Dockerfile)
 * [`oraclelinux8-python:3.9`](oraclelinux8/python/3.9/Dockerfile)
+* [`oraclelinux8-python:3.9-oracledb`](oraclelinux8/python/3.9-oracledb/Dockerfile)
+* [`oraclelinux8-python:3.11`](oraclelinux8/python/3.11/Dockerfile)
+* [`oraclelinux8-python:3.11-oracledb`](oraclelinux8/python/3.11-oracledb/Dockerfile)
+* [`oraclelinux8-python:3.12`](oraclelinux8/python/3.12/Dockerfile)
+* [`oraclelinux8-python:3.12-oracledb`](oraclelinux8/python/3.12-oracledb/Dockerfile)
 
 ### Ruby module
 
@@ -129,6 +132,67 @@ You should then be able to create a new Ruby on Rails application.
 * [`oraclelinux8-ruby:2.7`](oraclelinux8/ruby/2.7/Dockerfile)
 * [`oraclelinux8-ruby:2.7-nodejs`](oraclelinux8/ruby/2.7-nodejs/Dockerfile)
 * [`oraclelinux8-ruby:3.0`](oraclelinux8/ruby/3.0/Dockerfile)
+* [`oraclelinux8-ruby:3.1`](oraclelinux8/ruby/3.1/Dockerfile)
+
+## Oracle Linux 9 based images
+
+### Go Toolset module (OL9)
+
+* [`oraclelinux9-golang:1.18`](oraclelinux9/golang/1.18/Dockerfile)
+
+### NGINX module (OL9)
+
+* [`oraclelinux9-nginx:1.20`](oraclelinux9/nginx/1.20/Dockerfile)
+* [`oraclelinux9-nginx:1.20-core`](oraclelinux9/nginx/1.20-core/Dockerfile)
+* [`oraclelinux9-nginx:1.20-full`](oraclelinux9/nginx/1.20-full/Dockerfile)
+
+### Node.js module (OL9)
+
+* [`oraclelinux9-nodejs:16`](oraclelinux9/nodejs/16/Dockerfile)
+* [`oraclelinux9-nodejs:18`](oraclelinux9/nodejs/18/Dockerfile)
+
+### Python modules (OL9)
+
+* [`oraclelinux9-python:3.9`](oraclelinux9/python/3.9/Dockerfile)
+* [`oraclelinux9-python:3.11`](oraclelinux9/python/3.11/Dockerfile)
+* [`oraclelinux9-python:3.11-oracledb`](oraclelinux9/python/3.11-oracledb/Dockerfile)
+* [`oraclelinux9-python:3.12`](oraclelinux9/python/3.12/Dockerfile)
+* [`oraclelinux9-python:3.12-oracledb`](oraclelinux9/python/3.12-oracledb/Dockerfile)
+
+## Oracle Linux 10 based images
+
+### Go Toolset (OL10)
+
+* [`oraclelinux10-golang:latest`](oraclelinux10/golang/latest/Dockerfile)
+* [`oraclelinux10-golang:1.24`](oraclelinux10/golang/1.24/Dockerfile)
+
+### Nginx (OL10)
+
+* [`oraclelinux10-nginx:1.26`](oraclelinux10/nginx/1.26/Dockerfile)
+* [`oraclelinux10-nginx:1.26-core`](oraclelinux10/nginx/1.26-core/Dockerfile)
+* [`oraclelinux10-nginx:1.26-full`](oraclelinux10/nginx/1.26-full/Dockerfile)
+
+### httpd (OL10)
+
+* [`oraclelinux10-httpd:2.4`](oraclelinux10/httpd/2.4/Dockerfile)
+
+### Node.js (OL10)
+
+* [`oraclelinux10-nodejs:22`](oraclelinux10/nodejs/22/Dockerfile)
+
+### Python (OL10)
+
+* [`oraclelinux10-python:3.12`](oraclelinux10/python/3.12/Dockerfile)
+* [`oraclelinux10-python:3.12-oracledb`](oraclelinux10/python/3.12-oracledb/Dockerfile)
+
+### Ruby (OL10)
+
+* [`oraclelinux10-ruby:3.3`](oraclelinux10/ruby/3.3/Dockerfile)
+
+### Valkey (OL10)
+
+* [`oraclelinux10-valkey:7`](oraclelinux10/valkey/7/Dockerfile)
+
 
 [1]: https://github.com/orgs/oracle/packages?repo_name=docker-images
 [2]: https://yum.oracle.com
