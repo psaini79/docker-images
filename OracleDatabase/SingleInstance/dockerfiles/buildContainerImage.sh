@@ -6,7 +6,7 @@
 # 
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 # 
-# Copyright (c) 2014,2023 Oracle and/or its affiliates.
+# Copyright (c) 2014,2024 Oracle and/or its affiliates.
 # 
 
 usage() {
@@ -32,7 +32,7 @@ Parameters:
 
 LICENSE UPL 1.0
 
-Copyright (c) 2014,2023 Oracle and/or its affiliates.
+Copyright (c) 2014,2024 Oracle and/or its affiliates.
 
 EOF
 
@@ -109,10 +109,10 @@ checkDockerVersion() {
 cd "$(dirname "$0")"
 
 # Parameters
-ENTERPRISE=0
+ENTERPRISE=${ENTERPRISE:-0}
 STANDARD=0
 EXPRESS=0
-FREE=0
+FREE=${FREE:-0}
 PATCHING=0
 BASE_ONLY=0
 # Obtaining the latest version to build
@@ -179,14 +179,18 @@ done
 # Check that we have a container runtime installed
 checkContainerRuntime
 
-# Only 19c EE is supported on ARM64 platform
+# Only 19c (EE) and 23ai (Free and EE) are supported on ARM64 platform
 if [ "$(arch)" == "aarch64" ] || [ "$(arch)" == "arm64" ]; then
   BUILD_OPTS=("--build-arg" "BASE_IMAGE=oraclelinux:8" "${BUILD_OPTS[@]}")
   PLATFORM=".arm64"
-  if { [ "${VERSION}" == "19.3.0" ] && [ "${ENTERPRISE}" -eq 1 ]; }; then
+  if [ "${VERSION}" == "19.3.0" ] && { [ "${BASE_ONLY}" -eq 1 ] || [ "${ENTERPRISE}" -eq 1 ]; }; then
     BUILD_OPTS=("--build-arg" "INSTALL_FILE_1=LINUX.ARM64_1919000_db_home.zip" "${BUILD_OPTS[@]}")
-  else
-    echo "Currently only 19c enterprise edition is supported on ARM64 platform.";
+  elif { [ "${VERSION}" == "23.9.0" ] && [ "${FREE}" -eq 1 ]; }; then
+    BUILD_OPTS=("--build-arg" "INSTALL_FILE_1=https://download.oracle.com/otn-pub/otn_software/db-free/oracle-database-free-23ai-23.9-1.el8.aarch64.rpm" "${BUILD_OPTS[@]}")
+  elif { [ "${VERSION}" == "23.26.0" ] && [ "${FREE}" -eq 1 ]; }; then
+    BUILD_OPTS=("--build-arg" "INSTALL_FILE_1=https://download.oracle.com/otn-pub/otn_software/db-free/oracle-ai-database-free-26ai-23.26.0-1.el8.aarch64.rpm" "${BUILD_OPTS[@]}")
+  elif { [ "${VERSION%%.*}" -lt 23 ] || [ "${EXPRESS}" -eq 1 ]; }; then
+    echo "Currently 19c (EE) and 23ai are supported on ARM64 platform.";
     exit 1;
   fi;
 fi;
@@ -228,9 +232,13 @@ cd "${VERSION}" || {
   exit 1;
 }
 
+if [ "${VERSION%%.*}" -ge 23 ]; then
+  DOCKERFILE="Containerfile"
+fi;
+
 # Which Dockerfile should be used?
-if [ "${VERSION}" == "12.1.0.2" ] || [ "${VERSION}" == "11.2.0.2" ] || [ "${VERSION}" == "18.4.0" ] || [ "${VERSION}" == "23.2.0" ] || { [ "${VERSION}" == "21.3.0" ] && [ "${EDITION}" == "xe" ]; }; then
-  DOCKERFILE=$( if [[ -f "Containerfile.${EDITION}" ]]; then echo "Containerfile.${EDITION}"; else echo "${DOCKERFILE}.${EDITION}";fi )
+if [ "${VERSION}" == "12.1.0.2" ] || [ "${VERSION}" == "11.2.0.2" ] || [ "${VERSION}" == "18.4.0" ] || { [ "${VERSION}" == "21.3.0" ] && [ "${EDITION}" == "xe" ]; } || { [ "${VERSION%%.*}" -ge 23 ] && [ "${EDITION}" == "free" ]; }; then
+  DOCKERFILE="${DOCKERFILE}.${EDITION}"
 fi;
 
 echo "$DOCKERFILE"

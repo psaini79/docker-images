@@ -20,20 +20,27 @@
 #
 # Pull base image
 # ---------------
-ARG BASE_IMAGE=oraclelinux:7-slim
+ARG BASE_IMAGE=oraclelinux:9
 # hadolint ignore=DL3006
 FROM ${BASE_IMAGE} as base
 
 # Labels
 # ------
-LABEL "provider"="Oracle"                                               \
-      "issues"="https://github.com/oracle/docker-images/issues"         \
-      "volume.data"="/opt/oracle/oradata"                               \
-      "volume.setup.location1"="/opt/oracle/scripts/setup"              \
-      "volume.setup.location2"="/docker-entrypoint-initdb.d/setup"      \
-      "volume.startup.location1"="/opt/oracle/scripts/startup"          \
-      "volume.startup.location2"="/docker-entrypoint-initdb.d/startup"  \
-      "port.listener"="1521"                                            \
+LABEL "provider"="Oracle"                                                           \
+      "maintainer"="Oracle Database Container Team <container-team_ww@oracle.com>"  \
+      "vendor"="Oracle Corporation"                                                 \
+      "version"="19.3.0"                                                            \
+      "release"="19.3.0"                                                            \
+      "name"="Oracle Database 19c"                                                  \
+      "summary"="Oracle Database 19c"                                               \
+      "description"="Container Image for Oracle Database Server Release 19c"        \
+      "issues"="https://github.com/oracle/docker-images/issues"                     \
+      "volume.data"="/opt/oracle/oradata"                                           \
+      "volume.setup.location1"="/opt/oracle/scripts/setup"                          \
+      "volume.setup.location2"="/docker-entrypoint-initdb.d/setup"                  \
+      "volume.startup.location1"="/opt/oracle/scripts/startup"                      \
+      "volume.startup.location2"="/docker-entrypoint-initdb.d/startup"              \
+      "port.listener"="1521"                                                        \
       "port.oemexpress"="5500"
 
 # Argument to control removal of components not needed after db software installation
@@ -59,7 +66,11 @@ ENV ORACLE_BASE=/opt/oracle \
     USER_SCRIPTS_FILE="runUserScripts.sh" \
     INSTALL_DB_BINARIES_FILE="installDBBinaries.sh" \
     RELINK_BINARY_FILE="relinkOracleBinary.sh" \
+    CONFIG_DG_PREREQS_FILE="configDataguardPrereqs.sh" \
     CONFIG_TCPS_FILE="configTcps.sh" \
+    TDE_SECRET_UTILS_FILE="tdeSecretUtils.sh" \
+    CLONEDB_OBJBACKUP="cloneDBObjBkup.sh" \
+    MANAGE_TNS_ALIASES="manageTnsAliases.sh" \
     SLIMMING=$SLIMMING \
     ENABLE_ARCHIVELOG=false \
     ARCHIVELOG_DIR_NAME=archive_logs \
@@ -67,6 +78,8 @@ ENV ORACLE_BASE=/opt/oracle \
     CLONE_DB=false \
     # To create a standby database referred by PRIMARY_DB_CONN_STR
     STANDBY_DB=false \
+    # Standby startup/health mode: READ_ONLY or MOUNTED
+    STANDBY_OPEN_MODE=READ_ONLY \
     # Env var below should be in <HOST>:<PORT>/<SERVICE_NAME> format
     PRIMARY_DB_CONN_STR="" \
     # For creating dataguard observer
@@ -84,13 +97,16 @@ ENV PATH=$ORACLE_HOME/bin:$ORACLE_HOME/OPatch/:/usr/sbin:$PATH \
 # Copy files needed during both installation and runtime
 # -------------
 COPY $SETUP_LINUX_FILE $CHECK_SPACE_FILE $INSTALL_DIR/
-COPY $RUN_FILE $START_FILE $CREATE_DB_FILE $CREATE_OBSERVER_FILE $CONFIG_RSP $PWD_FILE $CHECK_DB_FILE $USER_SCRIPTS_FILE $RELINK_BINARY_FILE $CONFIG_TCPS_FILE $ORACLE_BASE/
+COPY $RUN_FILE $START_FILE $CREATE_DB_FILE $CREATE_OBSERVER_FILE $CONFIG_RSP $PWD_FILE $CHECK_DB_FILE $USER_SCRIPTS_FILE $RELINK_BINARY_FILE $CONFIG_DG_PREREQS_FILE $CONFIG_TCPS_FILE $TDE_SECRET_UTILS_FILE $CLONEDB_OBJBACKUP $MANAGE_TNS_ALIASES $ORACLE_BASE/
 
 RUN chmod ug+x $INSTALL_DIR/*.sh && \
     sync && \
     $INSTALL_DIR/$CHECK_SPACE_FILE && \
     $INSTALL_DIR/$SETUP_LINUX_FILE && \
-    rm -rf $INSTALL_DIR
+    rm -rf $INSTALL_DIR && \
+    mkdir /licenses
+
+COPY license.txt /licenses/
 
 
 
@@ -111,6 +127,7 @@ COPY --chown=oracle:dba $INSTALL_FILE_1 $INSTALL_RSP $INSTALL_DB_BINARIES_FILE $
 USER oracle
 RUN chmod ug+x "$INSTALL_DIR"/*.sh && \
     sync && \
+    export CV_ASSUME_DISTID=OL7 && \
     "$INSTALL_DIR"/"$INSTALL_DB_BINARIES_FILE" $DB_EDITION
 
 

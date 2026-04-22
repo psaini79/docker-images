@@ -105,6 +105,39 @@ EOF
    lsnrctl stop
 }
 
+########### Debug hold helper ############
+function debug_hold_on_error() {
+   local step_name="$1"
+   local exit_code="$2"
+   echo "#####################################"
+   echo "########### E R R O R ###############"
+   echo "Step failed: ${step_name}"
+   echo "Exit code : ${exit_code}"
+   echo "ENABLE_DEBUG=true, keeping container alive for debugging."
+   echo "Useful logs:"
+   echo "  - DBCA logs: ${ORACLE_BASE}/cfgtoollogs/dbca"
+   echo "  - Alert logs: ${ORACLE_BASE}/diag/rdbms/*/*/trace/alert*.log"
+   echo "########### E R R O R ###############"
+   echo "#####################################"
+   tail -f /dev/null
+}
+
+########### Run command with optional debug hold ############
+function run_or_debug() {
+   local step_name="$1"
+   shift
+
+   "$@"
+   local rc=$?
+   if [ $rc -ne 0 ]; then
+      if [ "${ENABLE_DEBUG}" = "true" ]; then
+         debug_hold_on_error "${step_name}" "$rc"
+      fi
+      return $rc
+   fi
+   return 0
+}
+
 ###################################
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 ############# MAIN ################
@@ -151,11 +184,34 @@ trap _int SIGINT
 # Set SIGTERM handler
 trap _term SIGTERM
 
-# Setting up ORACLE_PWD if podman secret is passed on
- if [ -e '/run/secrets/oracle_pwd' ]; then
-    ORACLE_PWD="$(cat '/run/secrets/oracle_pwd')"
-    export ORACLE_PWD
- fi
+# Shared TDE secret helper functions
+TDE_SECRET_UTILS_FILE="${TDE_SECRET_UTILS_FILE:-tdeSecretUtils.sh}"
+if [ -f "$ORACLE_BASE"/"$TDE_SECRET_UTILS_FILE" ]; then
+   # shellcheck source=/dev/null
+   . "$ORACLE_BASE"/"$TDE_SECRET_UTILS_FILE"
+else
+   echo "ERROR: Missing required TDE helper: $ORACLE_BASE/$TDE_SECRET_UTILS_FILE. Exiting..."
+   exit 1
+fi
+
+# Setting up ORACLE_PWD if secret file is present.
+# Defaults keep existing behavior: /run/secrets/oracle_pwd
+SECRET_BASE_DIR="${SECRET_BASE_DIR:-/run/secrets}"
+ORACLE_PWD_SECRET_NAME="${ORACLE_PWD_SECRET_NAME:-oracle_pwd}"
+ORACLE_PWD_SECRET_FILE="${SECRET_BASE_DIR}/${ORACLE_PWD_SECRET_NAME}"
+if [ -e "${ORACLE_PWD_SECRET_FILE}" ]; then
+   ORACLE_PWD="$(cat "${ORACLE_PWD_SECRET_FILE}")"
+   export ORACLE_PWD
+fi
+
+# Optional TDE password secret setup for DBCA.
+TDE_ENABLED="${TDE_ENABLED:-false}"
+if [ "${TDE_ENABLED}" = "true" ] && [ "${STANDBY_DB}" != "true" ]; then
+   if ! tde_require_primary_password; then
+      exit 1
+   fi
+fi
+export TDE_ENABLED ORACLE_TDE_PWD_SECRET_NAME ORACLE_TDE_SECRET_FILE SECRET_BASE_DIR
 
 # Creation of Observer only section
 if [ "${DG_OBSERVER_ONLY}" = "true" ]; then
@@ -224,6 +280,8 @@ export ORACLE_PDB=${ORACLE_PDB^^}
 
 # Default for ORACLE CHARACTERSET
 export ORACLE_CHARACTERSET=${ORACLE_CHARACTERSET:-AL32UTF8}
+ENABLE_DEBUG="${ENABLE_DEBUG:-false}"
+export ENABLE_DEBUG
 
 # Call relinkOracleBinary.sh before the database is created or started
 # shellcheck disable=SC1090
@@ -268,8 +326,12 @@ else
   ipcs -m | awk ' /[0-9]/ {print $2}' | xargs -n1 ipcrm -m 2> /dev/null
   ipcs -s | awk ' /[0-9]/ {print $2}' | xargs -n1 ipcrm -s 2> /dev/null
 
-  # Create database
-  "$ORACLE_BASE"/"$CREATE_DB_FILE" "$ORACLE_SID" "$ORACLE_PDB" "$ORACLE_PWD" || exit 1;
+  # Create database and checking option as if you use backup then DBCA will not be involved
+  if [[ -n "${CLONE_DB_FROM_OBJ_BACKUP:-}" || -n "${CLONE_DB_FROM_FS_BACKUP:-}" ]]; then
+      run_or_debug "cloneDBObjBkup.sh" "$ORACLE_BASE"/"$CLONEDB_OBJBACKUP" || exit 1
+  else
+   run_or_debug "createDB.sh" "$ORACLE_BASE"/"$CREATE_DB_FILE" "$ORACLE_SID" "$ORACLE_PDB" "$ORACLE_PWD" || exit 1;
+  fi 
 
   # Check whether database is successfully created
   if "$ORACLE_BASE"/"$CHECK_DB_FILE"; then
@@ -289,7 +351,7 @@ else
 
    # Setup TCPS with the database
   if [ "${ENABLE_TCPS}" = "true" ]; then
-    "${ORACLE_BASE}"/"${CONFIG_TCPS_FILE}"
+    run_or_debug "configTcps.sh" "${ORACLE_BASE}"/"${CONFIG_TCPS_FILE}" || exit 1
   fi
 
 fi;

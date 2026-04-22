@@ -1,7 +1,7 @@
 #!/bin/bash
 # LICENSE UPL 1.0
 #
-# Copyright (c) 2020 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2024 Oracle and/or its affiliates. All rights reserved.
 #
 # Since: Mar, 2020
 # Author: mohammed.qureshi@oracle.com
@@ -60,7 +60,6 @@ for i in {1..10}; do
    $condn_sql
    alter database mount;
    alter database open;
-   alter pluggable database all open;
    alter system register;
    exit;
 EOF

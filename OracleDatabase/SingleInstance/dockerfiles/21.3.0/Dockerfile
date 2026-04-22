@@ -20,18 +20,27 @@
 #
 # Pull base image
 # ---------------
-FROM oraclelinux:7-slim as base
+ARG BASE_IMAGE=oraclelinux:8
+# hadolint ignore=DL3006
+FROM ${BASE_IMAGE} as base
 
 # Labels
 # ------
-LABEL "provider"="Oracle"                                               \
-      "issues"="https://github.com/oracle/docker-images/issues"         \
-      "volume.data"="/opt/oracle/oradata"                               \
-      "volume.setup.location1"="/opt/oracle/scripts/setup"              \
-      "volume.setup.location2"="/docker-entrypoint-initdb.d/setup"      \
-      "volume.startup.location1"="/opt/oracle/scripts/startup"          \
-      "volume.startup.location2"="/docker-entrypoint-initdb.d/startup"  \
-      "port.listener"="1521"                                            \
+LABEL "provider"="Oracle"                                                           \
+      "maintainer"="Oracle Database Container Team <container-team_ww@oracle.com>"  \
+      "vendor"="Oracle Corporation"                                                 \
+      "version"="21.3.0"                                                            \
+      "release"="21.3.0"                                                            \
+      "name"="Oracle Database 21c"                                                  \
+      "summary"="Oracle Database 21c"                                               \
+      "description"="Container Image for Oracle Database Server Release 21c"        \
+      "issues"="https://github.com/oracle/docker-images/issues"                     \
+      "volume.data"="/opt/oracle/oradata"                                           \
+      "volume.setup.location1"="/opt/oracle/scripts/setup"                          \
+      "volume.setup.location2"="/docker-entrypoint-initdb.d/setup"                  \
+      "volume.startup.location1"="/opt/oracle/scripts/startup"                      \
+      "volume.startup.location2"="/docker-entrypoint-initdb.d/startup"              \
+      "port.listener"="1521"                                                        \
       "port.oemexpress"="5500"
 
 # Argument to control removal of components not needed after db software installation
@@ -89,7 +98,10 @@ RUN chmod ug+x $INSTALL_DIR/*.sh && \
     sync && \
     $INSTALL_DIR/$CHECK_SPACE_FILE && \
     $INSTALL_DIR/$SETUP_LINUX_FILE && \
-    rm -rf $INSTALL_DIR
+    rm -rf $INSTALL_DIR && \
+    mkdir /licenses
+
+COPY license.txt /licenses/
 
 
 

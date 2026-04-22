@@ -30,14 +30,15 @@ ENV STARTUP_FILE=startUp.sh \
     SHUT_DB_FILE=shutDown.sh \
     LOCKING_SCRIPT=lock.py \
     SWAP_LOCK_FILE=swapLocks.sh \
-    CHECK_DB_LOCK_FILE=checkDBLockStatus.sh
+    CHECK_DB_LOCK_FILE=checkDBLockStatus.sh \
+    PYTHONUNBUFFERED=1
 
 # Turn on dnfs
 # hadolint ignore=DL3003
 RUN cd "$ORACLE_HOME"/rdbms/lib && make -f ins_rdbms.mk dnfs_on
 
 # Updated Health Check
-HEALTHCHECK --interval=1m --start-period=15m \
+HEALTHCHECK --interval=1m --start-period=15m --timeout=30s \
    CMD "$ORACLE_BASE/$CHECK_DB_LOCK_FILE" >/dev/null || exit 1
 
 # backup original runOracle

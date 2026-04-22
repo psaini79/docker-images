@@ -1,7 +1,7 @@
 #!/bin/bash
 # LICENSE UPL 1.0
 #
-# Copyright (c) 1982-2022 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 1982-2024 Oracle and/or its affiliates. All rights reserved.
 # 
 # Since: November, 2016
 # Author: gerald.venzl@oracle.com
@@ -21,7 +21,8 @@ function setupNetworkConfig {
 
   # sqlnet.ora
   echo "NAMES.DIRECTORY_PATH= (TNSNAMES, EZCONNECT, HOSTNAME)
-DISABLE_OOB=ON" > "$ORACLE_BASE_HOME"/network/admin/sqlnet.ora
+DISABLE_OOB=ON
+SQLNET.EXPIRE_TIME=3" > "$ORACLE_BASE_HOME"/network/admin/sqlnet.ora
 
   # listener.ora
   echo "LISTENER = 
@@ -57,7 +58,8 @@ function setupTnsnames {
 function setupNetworkConfigXE {
   # sqlnet.ora
   echo "NAMES.DIRECTORY_PATH= (TNSNAMES, EZCONNECT, HOSTNAME)
-DISABLE_OOB=ON" > "$ORACLE_BASE_HOME"/network/admin/sqlnet.ora
+DISABLE_OOB=ON
+SQLNET.EXPIRE_TIME=3" > "$ORACLE_BASE_HOME"/network/admin/sqlnet.ora
 
   # listener.ora 
    echo "# listener.ora Network Configuration File:

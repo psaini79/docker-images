@@ -22,14 +22,14 @@ ARG BASE_IMAGE=oracle/database:${BASE_IMAGE_VERSION}-ee
 ARG BASE_REPO=https://github.com/oracle/db-sharding
 
 # Creating stage for downloading necessary script files
-FROM oraclelinux:7-slim as downloader
+FROM ${BASE_IMAGE} as downloader
 ARG BASE_REPO
 ENV BASE_REPO=$BASE_REPO
 WORKDIR /tmp
 
-RUN yum -y install gzip tar && \
-    curl -L -o master.tar.gz ${BASE_REPO}/archive/master.tar.gz && \
-    tar -xvf master.tar.gz
+USER root
+RUN yum -y install git && \
+    git clone --depth=1 ${BASE_REPO}
 
 # Creating another stage for sharding extension creation
 FROM ${BASE_IMAGE}
@@ -54,15 +54,34 @@ ENV CMD_EXEC="cmdExec" \
    SSHARD_PY="orasshard.py" \
    RUN_SHARD_FILE="runOraShardSetup.sh" \
    RUN_FILE="runOracle.sh" \
+   PYTHON_FILE="/usr/bin/python" \
+   PYTHON3_FILE="/usr/libexec/platform-python3.6" \
    SHARD_SETUP="false"
 
+# Create Soft link and install python3 RPM
+
+USER root
+RUN yum -y install python3
+RUN if [ ! -f $PYTHON_FILE ]; then \
+      ln -s $PYTHON3_FILE $PYTHON_FILE && \
+      :; \
+    fi && \
+    sync
+
 # backup original runOracle
+USER oracle
 RUN if test -e "$ORACLE_BASE/$RUN_FILE.orig"; then EXTN='extended'; else EXTN='orig'; fi ; \
     mv "$ORACLE_BASE/$RUN_FILE" "$ORACLE_BASE/$RUN_FILE.$EXTN"
 
+RUN mkdir -p $ORACLE_BASE/scripts/sharding/scripts && \
+    chown -R oracle:dba $ORACLE_BASE/scripts && \
+    sync
+
 # Copy updated scripts for sharding support
-COPY  --chown=oracle:dba --from=downloader /tmp/db-sharding-master/docker-based-sharding-deployment/dockerfiles/${BASE_IMAGE_VERSION}/scripts/* $ORACLE_BASE/scripts/sharding/
-RUN mv "$ORACLE_BASE/scripts/sharding/$RUN_FILE" "$ORACLE_BASE/$RUN_FILE.$EXTENSION_NAME"
+COPY  --chown=oracle:dba --from=downloader /tmp/db-sharding/container-based-sharding-deployment/containerfiles/scripts/* $ORACLE_BASE/scripts/sharding/
+RUN mv "$ORACLE_BASE/scripts/sharding/$RUN_FILE" "$ORACLE_BASE/$RUN_FILE.$EXTENSION_NAME" && \
+    chmod 755 $ORACLE_BASE/scripts/sharding/* && \
+    sync
 
 # Set perms and append a call to main runOracle
 RUN if test -e "$ORACLE_BASE/$RUN_FILE.extended"; then \
@@ -72,4 +91,6 @@ RUN if test -e "$ORACLE_BASE/$RUN_FILE.extended"; then \
        sed  -i "\$a . $ORACLE_BASE/$RUN_FILE.$EXTENSION_NAME" "$ORACLE_BASE/$RUN_FILE"; \
     fi && \
     sed -i '/alert.log/,$ s/wait \$childPID//' "$ORACLE_BASE"/runOracle.sh.orig && \
-    chmod ug+x $ORACLE_BASE/$RUN_FILE $ORACLE_BASE/$RUN_FILE.$EXTENSION_NAME $ORACLE_BASE/scripts/sharding/*.sh $ORACLE_BASE/scripts/sharding/*.py && sync
+    chmod ug+x $ORACLE_BASE/$RUN_FILE $ORACLE_BASE/$RUN_FILE.$EXTENSION_NAME $ORACLE_BASE/scripts/sharding/*.sh $ORACLE_BASE/scripts/sharding/*.py && \
+    chown oracle:dba $ORACLE_BASE/$RUN_FILE && \
+    sync

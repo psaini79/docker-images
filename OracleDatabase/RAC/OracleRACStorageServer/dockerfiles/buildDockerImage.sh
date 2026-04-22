@@ -34,7 +34,7 @@ EOF
 ##############
 
 # Parameters
-VERSION="12.2.0.1"
+VERSION="23.3.0"
 SKIPMD5=0
 DOCKEROPS=""
 
